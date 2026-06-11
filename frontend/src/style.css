@@ -1,0 +1,15 @@
+body {
+  background-color: #f8f9fa;
+}
+
+.navbar-brand {
+  font-weight: bold;
+}
+
+.ticket-card {
+  transition: transform 0.1s;
+}
+
+.ticket-card:hover {
+  transform: translateY(-2px);
+}
