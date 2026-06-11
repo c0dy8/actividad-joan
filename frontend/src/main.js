@@ -4,37 +4,38 @@ import { dashboardPage } from './pages/dashboardPage.js'
 import { ticketsPage, newTicketPage, ticketDetailPage } from './pages/ticketsPage.js'
 
 function isLoggedIn() {
-  return !!localStorage.getItem('token')
+  const token = localStorage.getItem('token')
+  if (token) {
+    return true
+  } else {
+    return false
+  }
 }
 
 function router() {
   const hash = window.location.hash || '#login'
 
-  if (!isLoggedIn() && hash !== '#login' && hash !== '#register') {
-    window.location.hash = '#login'
-    return
-  }
-
-  if (isLoggedIn() && (hash === '#login' || hash === '#register')) {
-    window.location.hash = '#dashboard'
-    return
-  }
-
-  if (hash === '#login') {
-    loginPage()
-  } else if (hash === '#register') {
-    registerPage()
-  } else if (hash === '#dashboard') {
-    dashboardPage()
-  } else if (hash === '#tickets') {
-    ticketsPage()
-  } else if (hash === '#tickets/new') {
-    newTicketPage()
-  } else if (hash.startsWith('#tickets/')) {
-    const id = parseInt(hash.split('/')[1])
-    ticketDetailPage(id)
+  if (isLoggedIn()) {
+    if (hash === '#login' || hash === '#register') {
+      window.location.hash = '#dashboard'
+    } else if (hash === '#dashboard') {
+      dashboardPage()
+    } else if (hash === '#tickets') {
+      ticketsPage()
+    } else if (hash === '#tickets/new') {
+      newTicketPage()
+    } else if (hash.startsWith('#tickets/')) {
+      const id = parseInt(hash.split('/')[1])
+      ticketDetailPage(id)
+    } else {
+      window.location.hash = '#dashboard'
+    }
   } else {
-    window.location.hash = '#login'
+    if (hash === '#register') {
+      registerPage()
+    } else {
+      loginPage()
+    }
   }
 }
 

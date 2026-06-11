@@ -21,16 +21,18 @@ async function getById(req, res) {
 async function create(req, res) {
   try {
     const { title, description, priority } = req.body
-    if (!title || !description) {
-      return res.status(400).json({ message: 'Título y descripción son obligatorios' })
+
+    if (title && description) {
+      const ticket = await ticketService.createTicket({
+        title,
+        description,
+        priority: priority || 'MEDIUM',
+        userId: req.userId,
+      })
+      res.status(201).json(ticket)
+    } else {
+      res.status(400).json({ message: 'Título y descripción son obligatorios' })
     }
-    const ticket = await ticketService.createTicket({
-      title,
-      description,
-      priority: priority || 'MEDIUM',
-      userId: req.userId,
-    })
-    res.status(201).json(ticket)
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -57,11 +59,13 @@ async function remove(req, res) {
 async function addComment(req, res) {
   try {
     const { content } = req.body
-    if (!content) {
-      return res.status(400).json({ message: 'El contenido es obligatorio' })
+
+    if (content) {
+      const comment = await ticketService.addComment(Number(req.params.id), req.userId, content)
+      res.status(201).json(comment)
+    } else {
+      res.status(400).json({ message: 'El contenido es obligatorio' })
     }
-    const comment = await ticketService.addComment(Number(req.params.id), req.userId, content)
-    res.status(201).json(comment)
   } catch (error) {
     res.status(500).json({ message: error.message })
   }

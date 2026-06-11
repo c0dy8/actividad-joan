@@ -5,8 +5,17 @@ const STATUS_LABELS = { OPEN: 'Abierto', IN_PROGRESS: 'En Proceso', CLOSED: 'Cer
 const PRIORITY_LABELS = { LOW: 'Baja', MEDIUM: 'Media', HIGH: 'Alta' }
 
 function getStatusColor(status) {
-  const colors = { OPEN: 'bg-primary', IN_PROGRESS: 'bg-warning text-dark', CLOSED: 'bg-success' }
-  return colors[status] || 'bg-secondary'
+  let color = 'bg-secondary'
+
+  if (status === 'OPEN') {
+    color = 'bg-primary'
+  } else if (status === 'IN_PROGRESS') {
+    color = 'bg-warning text-dark'
+  } else if (status === 'CLOSED') {
+    color = 'bg-success'
+  }
+
+  return color
 }
 
 export async function ticketsPage() {
@@ -16,14 +25,14 @@ export async function ticketsPage() {
 
   const tickets = await getTickets()
 
-  app.innerHTML = `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Mis Tickets</h2>
-      <a href="#tickets/new" class="btn btn-success">+ Nuevo Ticket</a>
-    </div>
-    ${tickets.length === 0
-      ? '<p class="text-muted">No tienes tickets aún. ¡Crea uno!</p>'
-      : tickets.map(ticket => `
+  let ticketsHtml = ''
+
+  if (tickets.length === 0) {
+    ticketsHtml = '<p class="text-muted">No tienes tickets aún. ¡Crea uno!</p>'
+  } else {
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i]
+      ticketsHtml += `
         <div class="card mb-3 ticket-card shadow-sm">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
@@ -35,14 +44,22 @@ export async function ticketsPage() {
                 <span class="badge ${getStatusColor(ticket.status)}">${STATUS_LABELS[ticket.status]}</span>
               </div>
             </div>
-            <p class="text-muted mb-1 small">${ticket.description.substring(0, 100)}${ticket.description.length > 100 ? '...' : ''}</p>
+            <p class="text-muted mb-1 small">${ticket.description.substring(0, 100)}...</p>
             <small class="text-muted">
               ${ticket.comments.length} comentario(s) · ${new Date(ticket.createdAt).toLocaleDateString()}
             </small>
           </div>
         </div>
-      `).join('')
+      `
     }
+  }
+
+  app.innerHTML = `
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Mis Tickets</h2>
+      <a href="#tickets/new" class="btn btn-success">+ Nuevo Ticket</a>
+    </div>
+    ${ticketsHtml}
   `
 }
 
@@ -107,94 +124,103 @@ export async function ticketDetailPage(id) {
 
   const ticket = await getTicket(id)
 
-  if (!ticket.id) {
-    app.innerHTML = `<p class="text-danger">Ticket no encontrado</p>`
-    return
-  }
+  if (ticket.id) {
+    let commentsHtml = ''
 
-  app.innerHTML = `
-    <div class="row">
-      <div class="col-md-8">
-        <div class="card shadow mb-3">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <h3>${ticket.title}</h3>
-              <div>
-                <span class="badge bg-secondary me-1">${PRIORITY_LABELS[ticket.priority]}</span>
-                <span class="badge ${getStatusColor(ticket.status)}">${STATUS_LABELS[ticket.status]}</span>
-              </div>
-            </div>
-            <p class="text-muted">Creado por ${ticket.user.name}</p>
-            <p>${ticket.description}</p>
-            <div class="mt-3">
-              <label class="form-label fw-bold">Cambiar estado</label>
-              <div class="d-flex gap-2 align-items-center">
-                <select class="form-select w-auto" id="status-select">
-                  <option value="OPEN" ${ticket.status === 'OPEN' ? 'selected' : ''}>Abierto</option>
-                  <option value="IN_PROGRESS" ${ticket.status === 'IN_PROGRESS' ? 'selected' : ''}>En Proceso</option>
-                  <option value="CLOSED" ${ticket.status === 'CLOSED' ? 'selected' : ''}>Cerrado</option>
-                </select>
-                <button class="btn btn-primary btn-sm" id="update-status-btn">Actualizar</button>
-              </div>
-            </div>
+    if (ticket.comments.length === 0) {
+      commentsHtml = '<p class="text-muted">Sin comentarios aún</p>'
+    } else {
+      for (let i = 0; i < ticket.comments.length; i++) {
+        const c = ticket.comments[i]
+        commentsHtml += `
+          <div class="border-bottom py-2">
+            <strong>${c.user.name}</strong>
+            <small class="text-muted ms-2">${new Date(c.createdAt).toLocaleDateString()}</small>
+            <p class="mb-0">${c.content}</p>
           </div>
-        </div>
-
-        <div class="card shadow">
-          <div class="card-body">
-            <h5>Comentarios (${ticket.comments.length})</h5>
-            <div id="comments-list">
-              ${ticket.comments.length === 0
-                ? '<p class="text-muted">Sin comentarios aún</p>'
-                : ticket.comments.map(c => `
-                  <div class="border-bottom py-2">
-                    <strong>${c.user.name}</strong>
-                    <small class="text-muted ms-2">${new Date(c.createdAt).toLocaleDateString()}</small>
-                    <p class="mb-0">${c.content}</p>
-                  </div>
-                `).join('')
-              }
-            </div>
-            <form id="comment-form" class="mt-3">
-              <div class="mb-2">
-                <textarea class="form-control" id="comment-content" rows="2" placeholder="Agregar comentario..."></textarea>
-              </div>
-              <button type="submit" class="btn btn-outline-primary btn-sm">Comentar</button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-4">
-        <div class="card shadow">
-          <div class="card-body">
-            <h6>Acciones</h6>
-            <a href="#tickets" class="btn btn-secondary btn-sm w-100 mb-2">Volver a Tickets</a>
-            <button class="btn btn-danger btn-sm w-100" id="delete-btn">Eliminar Ticket</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
-
-  document.getElementById('update-status-btn').addEventListener('click', async () => {
-    const status = document.getElementById('status-select').value
-    await updateTicket(id, { status })
-    window.location.hash = `#tickets/${id}`
-  })
-
-  document.getElementById('comment-form').addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const content = document.getElementById('comment-content').value
-    if (!content.trim()) return
-    await addComment(id, content)
-    window.location.hash = `#tickets/${id}`
-  })
-
-  document.getElementById('delete-btn').addEventListener('click', async () => {
-    if (confirm('¿Seguro que quieres eliminar este ticket?')) {
-      await deleteTicket(id)
-      window.location.hash = '#tickets'
+        `
+      }
     }
-  })
+
+    app.innerHTML = `
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow mb-3">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <h3>${ticket.title}</h3>
+                <div>
+                  <span class="badge bg-secondary me-1">${PRIORITY_LABELS[ticket.priority]}</span>
+                  <span class="badge ${getStatusColor(ticket.status)}">${STATUS_LABELS[ticket.status]}</span>
+                </div>
+              </div>
+              <p class="text-muted">Creado por ${ticket.user.name}</p>
+              <p>${ticket.description}</p>
+              <div class="mt-3">
+                <label class="form-label fw-bold">Cambiar estado</label>
+                <div class="d-flex gap-2 align-items-center">
+                  <select class="form-select w-auto" id="status-select">
+                    <option value="OPEN" ${ticket.status === 'OPEN' ? 'selected' : ''}>Abierto</option>
+                    <option value="IN_PROGRESS" ${ticket.status === 'IN_PROGRESS' ? 'selected' : ''}>En Proceso</option>
+                    <option value="CLOSED" ${ticket.status === 'CLOSED' ? 'selected' : ''}>Cerrado</option>
+                  </select>
+                  <button class="btn btn-primary btn-sm" id="update-status-btn">Actualizar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card shadow">
+            <div class="card-body">
+              <h5>Comentarios (${ticket.comments.length})</h5>
+              <div id="comments-list">
+                ${commentsHtml}
+              </div>
+              <form id="comment-form" class="mt-3">
+                <div class="mb-2">
+                  <textarea class="form-control" id="comment-content" rows="2" placeholder="Agregar comentario..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-outline-primary btn-sm">Comentar</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card shadow">
+            <div class="card-body">
+              <h6>Acciones</h6>
+              <a href="#tickets" class="btn btn-secondary btn-sm w-100 mb-2">Volver a Tickets</a>
+              <button class="btn btn-danger btn-sm w-100" id="delete-btn">Eliminar Ticket</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+
+    document.getElementById('update-status-btn').addEventListener('click', async () => {
+      const status = document.getElementById('status-select').value
+      await updateTicket(id, { status })
+      window.location.hash = `#tickets/${id}`
+    })
+
+    document.getElementById('comment-form').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const content = document.getElementById('comment-content').value
+
+      if (content.trim()) {
+        await addComment(id, content)
+        window.location.hash = `#tickets/${id}`
+      }
+    })
+
+    document.getElementById('delete-btn').addEventListener('click', async () => {
+      if (confirm('¿Seguro que quieres eliminar este ticket?')) {
+        await deleteTicket(id)
+        window.location.hash = '#tickets'
+      }
+    })
+  } else {
+    app.innerHTML = `<p class="text-danger">Ticket no encontrado</p>`
+  }
 }

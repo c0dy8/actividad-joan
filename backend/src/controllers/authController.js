@@ -3,11 +3,13 @@ const authService = require('../services/authService')
 async function register(req, res) {
   try {
     const { name, email, password } = req.body
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Todos los campos son obligatorios' })
+
+    if (name && email && password) {
+      const result = await authService.register(name, email, password)
+      res.status(201).json(result)
+    } else {
+      res.status(400).json({ message: 'Todos los campos son obligatorios' })
     }
-    const result = await authService.register(name, email, password)
-    res.status(201).json(result)
   } catch (error) {
     res.status(400).json({ message: error.message })
   }
@@ -16,11 +18,13 @@ async function register(req, res) {
 async function login(req, res) {
   try {
     const { email, password } = req.body
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email y contraseña son obligatorios' })
+
+    if (email && password) {
+      const result = await authService.login(email, password)
+      res.json(result)
+    } else {
+      res.status(400).json({ message: 'Email y contraseña son obligatorios' })
     }
-    const result = await authService.login(email, password)
-    res.json(result)
   } catch (error) {
     res.status(400).json({ message: error.message })
   }

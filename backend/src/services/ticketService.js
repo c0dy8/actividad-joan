@@ -6,8 +6,12 @@ async function getAllTickets(userId) {
 
 async function getTicketById(id) {
   const ticket = await ticketRepository.findById(id)
-  if (!ticket) throw new Error('Ticket no encontrado')
-  return ticket
+
+  if (ticket) {
+    return ticket
+  } else {
+    throw new Error('Ticket no encontrado')
+  }
 }
 
 async function createTicket(data) {
